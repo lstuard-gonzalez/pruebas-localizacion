@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NKS Localización — Estadísticas por consultor</title>
+<style>
+:root{
+  --bg:#FAF9F7; --surface:#FFFFFF; --ink:#1C2733; --ink-soft:#5B6570; --line:#E5E1DA;
+  --accent:#E85D1F; --accent-soft:#FBEDE4;
+  --ok:#1E8E5A; --ok-soft:#E3F2EA; --fail:#C43D3D; --fail-soft:#F9E7E7;
+  --code-bg:#F0EEE9; --shadow:0 1px 3px rgba(28,39,51,.07),0 4px 14px rgba(28,39,51,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141A21; --surface:#1C242E; --ink:#E9E6E1; --ink-soft:#9AA3AD; --line:#2C3641;
+    --accent:#F0722F; --accent-soft:#33261D;
+    --ok:#3DB57F; --ok-soft:#1B2F26; --fail:#E06767; --fail-soft:#35211F;
+    --code-bg:#242E39; --shadow:0 1px 3px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#FAF9F7; --surface:#FFFFFF; --ink:#1C2733; --ink-soft:#5B6570; --line:#E5E1DA;
+  --accent:#E85D1F; --accent-soft:#FBEDE4;
+  --ok:#1E8E5A; --ok-soft:#E3F2EA; --fail:#C43D3D; --fail-soft:#F9E7E7;
+  --code-bg:#F0EEE9; --shadow:0 1px 3px rgba(28,39,51,.07),0 4px 14px rgba(28,39,51,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#141A21; --surface:#1C242E; --ink:#E9E6E1; --ink-soft:#9AA3AD; --line:#2C3641;
+  --accent:#F0722F; --accent-soft:#33261D;
+  --ok:#3DB57F; --ok-soft:#1B2F26; --fail:#E06767; --fail-soft:#35211F;
+  --code-bg:#242E39; --shadow:0 1px 3px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif;}
+.mono{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent);text-decoration:none}
+button{font:inherit;cursor:pointer}
+.wrap{max-width:1060px;margin:0 auto;padding:28px clamp(18px,4vw,52px) 60px}
+
+/* ── Header ── */
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand b{font-size:17px;letter-spacing:.02em}
+.brand span{color:var(--accent);font-weight:700}
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:6px}
+.head .sub{color:var(--ink-soft);font-size:12px}
+.head .actions{margin-left:auto;display:flex;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;font-size:13.5px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+h1{font-size:clamp(22px,3vw,30px);margin:14px 0 6px;letter-spacing:-.01em;text-wrap:balance}
+.lead{color:var(--ink-soft);max-width:70ch;margin:0 0 22px}
+
+/* ── Tarjetas globales ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:26px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .v{font-size:26px;font-weight:700}
+.kpi .l{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+.kpi.ok .v{color:var(--ok)} .kpi.fail .v{color:var(--fail)}
+
+/* ── Tarjeta de consultor ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:16px 0;
+  box-shadow:var(--shadow);padding:18px 20px}
+.c-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.c-head h2{font-size:18px;margin:0;letter-spacing:-.01em}
+.c-head .date{font-size:12px;color:var(--ink-soft)}
+.c-head .pct{margin-left:auto;font-size:24px;font-weight:700}
+.bar{height:8px;border-radius:4px;background:var(--line);margin:10px 0 6px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.b-ok{background:var(--ok)} .b-fail{background:var(--fail)}
+.c-nums{font-size:12.5px;color:var(--ink-soft)}
+.c-nums b.ok{color:var(--ok)} .c-nums b.fail{color:var(--fail)}
+.secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 18px;margin-top:12px}
+.secrow{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.secrow .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-soft)}
+.secrow .bar{width:70px;height:5px;margin:0;flex:none}
+.secrow .n{color:var(--ink-soft);font-size:11px;width:40px;text-align:right;flex:none}
+details.fails{margin-top:12px;border:1px dashed var(--line);border-radius:9px}
+details.fails summary{cursor:pointer;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--fail);
+  text-transform:uppercase;letter-spacing:.05em;list-style:none}
+details.fails summary::-webkit-details-marker{display:none}
+details.fails summary::before{content:"▸ "} details.fails[open] summary::before{content:"▾ "}
+.fail-list{margin:0;padding:2px 18px 12px;list-style:none;font-size:13.5px}
+.fail-list li{margin:6px 0}
+.code{font-size:12px;background:var(--code-bg);border-radius:5px;padding:2px 7px;white-space:nowrap;font-weight:600}
+.fail-list .note{color:var(--ink-soft)}
+
+/* ── Estados ── */
+.msg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;
+  box-shadow:var(--shadow);color:var(--ink-soft);max-width:70ch}
+.msg b{color:var(--ink)}
+.msg .code{white-space:normal}
+.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:var(--ink-soft);font-size:12.5px}
+.foot b{color:var(--accent)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="head">
+      <div class="brand"><b>NIKKO<span>SOFT</span></b></div>
+      <span class="sub">NKS Full Localización · <span class="mono">18.0-refactor</span></span>
+      <div class="actions">
+        <button class="btn" id="btnReload">↻ Actualizar</button>
+        <a class="btn" href="checklist-validacion-localizacion.html">Ir al checklist →</a>
+      </div>
+    </div>
+    <h1>Estadísticas de validación por consultor</h1>
+    <p class="lead">Cada consultor trabaja su checklist, descarga su <b>JSON</b> con el botón
+    «Descargar JSON (repo)» y lo sube a la carpeta <span class="code mono">data/</span> del
+    repositorio (por la web de GitHub: <i>Add file → Upload files</i>). Este tablero lee esa
+    carpeta y consolida el avance de todos.</p>
+  </header>
+
+  <div class="kpis" id="kpis" hidden>
+    <div class="kpi"><div class="v" id="kCons">0</div><div class="l">Consultores</div></div>
+    <div class="kpi"><div class="v" id="kAvg">0%</div><div class="l">Avance promedio</div></div>
+    <div class="kpi ok"><div class="v" id="kOk">0</div><div class="l">Pruebas ✓</div></div>
+    <div class="kpi fail"><div class="v" id="kFail">0</div><div class="l">Fallas ✗</div></div>
+    <div class="kpi"><div class="v" id="kPend">0</div><div class="l">Pendientes</div></div>
+  </div>
+
+  <div id="out"><div class="msg">Cargando datos de <span class="code mono">data/</span>…</div></div>
+
+  <footer class="foot">
+    <span>El % de avance cuenta filas marcadas (✓ o ✗) sobre el total de 109 verificaciones.</span>
+    <span><b>NIKKOSOFT</b> CONSULTORES C.A. · 2026</span>
+  </footer>
+</div>
+
+<script>
+const OWNER="lstuard-gonzalez",REPO="pruebas-localizacion",BRANCH="main",DIR="data";
+const SECS=[
+ ["DUAL","§1 Dualidad Monetaria",8],
+ ["RET","§2 Retenciones clásicas",9],
+ ["RP","§3 Retención en el pago",5],
+ ["MC","§4 Multi-compañía",4],
+ ["NC","§5 Números de Control",11],
+ ["EFD","§6 Facturación Digital",8],
+ ["COB","§7 Cobros Distribuidos",10],
+ ["ANT","§8 Anticipos",7],
+ ["IMP","§9 Importaciones",12],
+ ["S2P","§10 Pedido → Compra",4],
+ ["BH","§11 Tesorería bancaria",5],
+ ["MKT","§12 Tasa de mercado",3],
+ ["ISAE","§13 ISAE / Patente",4],
+ ["RQ","§14 RESQUIMCF",3],
+ ["BD","§15 Carga histórica",3],
+ ["FR","§16 Restricciones fiscales",3],
+ ["SEC","§17 Plataforma",5],
+ ["DASH","§18 Analítica",3],
+ ["LIC","§19 Licores",2]];
+const TOTAL=SECS.reduce((a,s)=>a+s[2],0);
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const out=document.getElementById("out");
+
+async function load(){
+  out.innerHTML='<div class="msg">Cargando datos de <span class="code mono">data/</span>…</div>';
+  document.getElementById("kpis").hidden=true;
+  let files;
+  try{
+    const r=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DIR}?ref=${BRANCH}`);
+    if(r.status===404){renderEmpty();return}
+    if(!r.ok)throw new Error(`GitHub API respondió ${r.status}`);
+    files=(await r.json()).filter(f=>f.type==="file"&&f.name.endsWith(".json")&&!f.name.startsWith("_"));
+  }catch(e){
+    out.innerHTML=`<div class="msg"><b>No pude leer la carpeta de datos.</b><br>
+      ${esc(e.message)}.<br>Puede ser falta de conexión o el límite de consultas anónimas de la
+      API de GitHub (60/hora por IP). Espera unos minutos y pulsa <b>↻ Actualizar</b>.</div>`;
+    return;
+  }
+  if(!files.length){renderEmpty();return}
+  const people=[];
+  await Promise.all(files.map(async f=>{
+    try{
+      const d=await(await fetch(f.download_url)).json();
+      if(d&&d.rows)people.push({file:f.name,...d});
+    }catch(e){console.warn("Archivo inválido:",f.name,e)}
+  }));
+  if(!people.length){renderEmpty();return}
+  render(people);
+}
+
+function renderEmpty(){
+  out.innerHTML=`<div class="msg"><b>Aún no hay resultados publicados.</b><br>
+    Cuando el primer consultor suba su JSON a la carpeta
+    <span class="code mono">data/</span> del repositorio, sus estadísticas aparecerán aquí.</div>`;
+}
+
+function stats(p){
+  let ok=0,fail=0;const bySec={};
+  SECS.forEach(s=>bySec[s[0]]={ok:0,fail:0,total:s[2]});
+  Object.keys(p.rows||{}).forEach(code=>{
+    const pre=code.split("-")[0],v=p.rows[code],b=bySec[pre];
+    if(!b)return;
+    if(v==="ok"){ok++;b.ok++}else if(v==="fail"){fail++;b.fail++}
+  });
+  return{ok,fail,pend:TOTAL-ok-fail,pct:Math.round((ok+fail)/TOTAL*100),bySec};
+}
+
+function render(people){
+  const P=people.map(p=>({p,s:stats(p)})).sort((a,b)=>b.s.pct-a.s.pct||a.p.tester.localeCompare(b.p.tester));
+  let gOk=0,gFail=0;
+  P.forEach(({s})=>{gOk+=s.ok;gFail+=s.fail});
+  document.getElementById("kCons").textContent=P.length;
+  document.getElementById("kAvg").textContent=Math.round(P.reduce((a,x)=>a+x.s.pct,0)/P.length)+"%";
+  document.getElementById("kOk").textContent=gOk;
+  document.getElementById("kFail").textContent=gFail;
+  document.getElementById("kPend").textContent=P.length*TOTAL-gOk-gFail;
+  document.getElementById("kpis").hidden=false;
+
+  out.innerHTML=P.map(({p,s})=>{
+    const fails=Object.keys(p.rows||{}).filter(c=>p.rows[c]==="fail").sort();
+    return `
+    <article class="card">
+      <div class="c-head">
+        <h2>${esc(p.tester||p.file)}</h2>
+        <span class="date mono">${esc(p.fecha||"")}</span>
+        <span class="pct">${s.pct}%</span>
+      </div>
+      <div class="bar"><i class="b-ok" style="width:${s.ok/TOTAL*100}%"></i><i class="b-fail" style="width:${s.fail/TOTAL*100}%"></i></div>
+      <div class="c-nums"><b class="ok">✓ ${s.ok}</b> · <b class="fail">✗ ${s.fail}</b> · ${s.pend} pendientes de ${TOTAL}</div>
+      <div class="secs">${SECS.map(([k,t,n])=>{
+        const b=s.bySec[k];
+        return `<div class="secrow"><span class="t" title="${esc(t)}">${esc(t)}</span>
+          <span class="bar"><i class="b-ok" style="width:${b.ok/n*100}%"></i><i class="b-fail" style="width:${b.fail/n*100}%"></i></span>
+          <span class="n mono">${b.ok+b.fail}/${n}</span></div>`}).join("")}
+      </div>
+      ${fails.length?`<details class="fails"><summary>${fails.length} falla${fails.length>1?"s":""} reportada${fails.length>1?"s":""}</summary>
+        <ul class="fail-list">${fails.map(c=>
+          `<li><span class="code mono">${esc(c)}</span> <span class="note">${esc((p.notes||{})[c]||"(sin nota)")}</span></li>`).join("")}
+        </ul></details>`:""}
+    </article>`}).join("");
+}
+
+document.getElementById("btnReload").addEventListener("click",load);
+load();
+</script>
+</body>
+</html>

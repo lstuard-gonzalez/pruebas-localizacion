@@ -160,7 +160,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
     <div class="meta">
       <input id="tester" placeholder="Tu nombre (tester)" aria-label="Nombre del tester">
       <button class="btn primary" id="btnExport">Exportar resultados</button>
+      <button class="btn" id="btnJson">Descargar JSON (repo)</button>
       <button class="btn" id="btnReset">Reiniciar todo</button>
+      <a class="btn" href="index.html">📊 Estadísticas</a>
     </div>
     <div class="warn"><b>Antes de empezar:</b> entra al staging, trabaja en la compañía
     <b>Nikkosoft Prueba</b> (salvo indicación) con permisos de Contable + Inventario.
@@ -379,7 +381,7 @@ let filter="all";
 
 /* ── Render ── */
 const secsEl=document.getElementById("secs"),tocEl=document.getElementById("toc");
-const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 function build(){
   secsEl.innerHTML=S.map(sec=>`
   <section class="sec" id="${sec.id}">
@@ -450,6 +452,24 @@ document.getElementById("btnExport").addEventListener("click",()=>{
   out+=`\nTOTAL: ✅ ${tOk} · ❌ ${tFail} · ⏳ ${tPend} de ${tOk+tFail+tPend}\n`;
   navigator.clipboard.writeText(out).then(()=>toast("Resultados copiados — pégalos en el canal"))
     .catch(()=>{prompt("Copia manualmente:",out)});
+});
+document.getElementById("btnJson").addEventListener("click",()=>{
+  const name=(st.tester||"").trim();
+  if(!name){toast("Escribe tu nombre antes de descargar");document.getElementById("tester").focus();return}
+  let ok=0,fail=0,total=0;
+  S.forEach(sec=>sec.c.forEach(r=>{total++;
+    if(st.rows[r[0]]==="ok")ok++;else if(st.rows[r[0]]==="fail")fail++}));
+  const rows={},notes={};
+  Object.keys(st.rows).forEach(k=>{if(st.rows[k])rows[k]=st.rows[k]});
+  Object.keys(st.notes).forEach(k=>{if((st.notes[k]||"").trim())notes[k]=st.notes[k].trim()});
+  const data={version:1,tester:name,fecha:new Date().toISOString().slice(0,10),
+    resumen:{ok,fail,pend:total-ok-fail,total},rows,notes};
+  const slug=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"consultor";
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));
+  a.download=`${slug}.json`;a.click();URL.revokeObjectURL(a.href);
+  toast("JSON descargado — súbelo a la carpeta data/ del repo");
 });
 
 /* ── Pintado ── */

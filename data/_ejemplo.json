@@ -1,0 +1,15 @@
+{
+ "version": 1,
+ "tester": "Consultor de Ejemplo",
+ "fecha": "2026-07-15",
+ "resumen": { "ok": 3, "fail": 1, "pend": 105, "total": 109 },
+ "rows": {
+  "DUAL-01": "ok",
+  "DUAL-02": "ok",
+  "DUAL-03": "ok",
+  "RET-01": "fail"
+ },
+ "notes": {
+  "RET-01": "El comprobante salió por 160 en vez de 120 (no aplicó el 75%)"
+ }
+}
