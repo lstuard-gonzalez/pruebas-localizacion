@@ -1,29 +1,23 @@
 # Resultados de validación
 
-`resultados.json` es el **respaldo automático** del avance del equipo: un GitHub Action
-([respaldo-datos.yml](../.github/workflows/respaldo-datos.yml)) lo trae del almacén en vivo
-cada 6 horas (también se puede lanzar a mano desde la pestaña *Actions → Respaldo de resultados
-→ Run workflow*).
+Aquí vive un archivo JSON por consultor (`danny.json`, `chriselys.json`, `luis.json`),
+escrito **automáticamente** por el [checklist](../checklist-validacion-localizacion.html):
+cada consultor toca su nombre al entrar y sus marcas se guardan solas aquí, con
+historial de commits.
 
-Nadie edita esta carpeta a mano: los consultores marcan sus pruebas en el
-[checklist](../checklist-validacion-localizacion.html) y el guardado es automático.
-El [tablero de estadísticas](../index.html) lee el almacén en vivo y, si no responde,
-cae a este respaldo.
+Nadie edita esta carpeta a mano. El [tablero de estadísticas](../index.html) lee estos
+archivos en vivo.
 
 ## Formato
 
 ```json
 {
  "version": 1,
- "consultores": {
-  "luis": {
-   "tester": "Luis",
-   "fecha": "2026-07-15",
-   "actualizado": "2026-07-15T14:30:00.000Z",
-   "resumen": { "ok": 12, "fail": 2, "pend": 95, "total": 109 },
-   "rows": { "DUAL-01": "ok", "DUAL-02": "fail" },
-   "notes": { "DUAL-02": "Los montos Bs no se recalcularon al cambiar la tasa" }
-  }
- }
+ "tester": "Luis",
+ "fecha": "2026-07-15",
+ "actualizado": "2026-07-15T14:30:00.000Z",
+ "resumen": { "ok": 12, "fail": 2, "pend": 95, "total": 109 },
+ "rows": { "DUAL-01": "ok", "DUAL-02": "fail" },
+ "notes": { "DUAL-02": "Los montos Bs no se recalcularon al cambiar la tasa" }
 }
 ```

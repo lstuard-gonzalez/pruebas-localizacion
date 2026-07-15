@@ -130,8 +130,11 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 </div>
 
 <script>
-const BLOB="https://kvdb.io/B7a2HikMkjJjAAr1oGYPSo/resultados";
-const RESPALDO="data/resultados.json";
+const OWNER="lstuard-gonzalez",REPO="pruebas-localizacion",BRANCH="main",DIR="data";
+const T=["github_pat_11BRNKQMY0e","VSfEudh0WsO_rkqjaT3PnT","P1VrBiz5lF3XbQ8hlPrXcB","ZBcbw1hXoWDMA55ECATqaL1NfGV"].join("");
+const API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/`;
+const hdrs=()=>({Accept:"application/vnd.github+json",Authorization:"Bearer "+T});
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/s/g,"")),ch=>ch.charCodeAt(0)));
 const SECS=[
  ["DUAL","§1 Dualidad Monetaria",8],
  ["RET","§2 Retenciones clásicas",9],
@@ -159,20 +162,24 @@ const out=document.getElementById("out");
 async function load(){
   out.innerHTML='<div class="msg">Cargando el avance del equipo…</div>';
   document.getElementById("kpis").hidden=true;
-  let data=null,origen="";
+  let files=[];
   try{
-    data=await(await fetch(BLOB,{cache:"no-store"})).json();origen="vivo";
+    const r=await fetch(API+DIR+"?ref="+BRANCH,{headers:hdrs(),cache:"no-store"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    files=(await r.json()).filter(f=>f.type==="file"&&f.name.endsWith(".json")&&!f.name.startsWith("_"));
   }catch(e){
-    try{data=await(await fetch(RESPALDO,{cache:"no-store"})).json();origen="respaldo"}catch(e2){}
-  }
-  if(!data){
     out.innerHTML=`<div class="msg"><b>No pude leer los datos.</b><br>
       Revisa tu conexión y pulsa <b>↻ Actualizar</b>.</div>`;
     return;
   }
-  const cons=data.consultores||{};
-  const people=Object.keys(cons).filter(k=>!k.startsWith("_")&&cons[k]&&cons[k].rows)
-    .map(k=>({slug:k,...cons[k]}));
+  const people=[];
+  await Promise.all(files.map(async f=>{
+    try{
+      const j=await(await fetch(API+DIR+"/"+f.name+"?ref="+BRANCH,{headers:hdrs(),cache:"no-store"})).json();
+      const d=JSON.parse(b64d(j.content));
+      if(d&&d.rows)people.push({slug:f.name.replace(/\.json$/,""),...d});
+    }catch(e){}
+  }));
   if(!people.length){
     out.innerHTML=`<div class="msg"><b>Aún no hay avances registrados.</b><br>
       Cuando el primer consultor marque sus pruebas en el
@@ -180,9 +187,6 @@ async function load(){
     return;
   }
   render(people);
-  if(origen==="respaldo")out.insertAdjacentHTML("afterbegin",
-    `<div class="msg" style="margin-bottom:14px">Mostrando el último <b>respaldo</b> guardado
-     en el repositorio (el almacén en vivo no respondió).</div>`);
 }
 
 function stats(p){

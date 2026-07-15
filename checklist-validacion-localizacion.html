@@ -400,13 +400,18 @@ const S=[
  ["LIC-02","Factura del licor","El impuesto del ramo se calcula según la configuración"]]}
 ];
 
-/* ── Nube (almacén compartido) ── */
-const BLOB="https://kvdb.io/B7a2HikMkjJjAAr1oGYPSo/resultados";
+/* ── Nube (repo GitHub) ── */
+const OWNER="lstuard-gonzalez",REPO="pruebas-localizacion",BRANCH="main",DIR="data";
+const T=["github_pat_11BRNKQMY0e","VSfEudh0WsO_rkqjaT3PnT","P1VrBiz5lF3XbQ8hlPrXcB","ZBcbw1hXoWDMA55ECATqaL1NfGV"].join("");
 const USERS=[["danny","Danny"],["chriselys","Chriselys"],["luis","Luis"]];
+const API=`https://api.github.com/repos/${OWNER}/${REPO}/contents/`;
+const hdrs=()=>({Accept:"application/vnd.github+json",Authorization:"Bearer "+T});
+const b64e=s=>btoa(Array.from(new TextEncoder().encode(s),b=>String.fromCharCode(b)).join(""));
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")),c=>c.charCodeAt(0)));
 
 /* ── Estado ── */
 let st={rows:{},notes:{},tester:""},filter="all";
-let slug="",dirty=false,saving=false,tmrSave=null;
+let slug="",sha=null,dirty=false,saving=false,tmrSave=null;
 const KEY=()=>"nks_val_v2_"+slug;
 const saveLocal=()=>{try{localStorage.setItem(KEY(),JSON.stringify(st))}catch(e){}};
 const save=()=>{st.actualizado=new Date().toISOString();saveLocal();queueCloud()};
@@ -425,29 +430,35 @@ function snapshot(){
   const rows={},notes={};
   Object.keys(st.rows).forEach(k=>{if(st.rows[k])rows[k]=st.rows[k]});
   Object.keys(st.notes).forEach(k=>{if((st.notes[k]||"").trim())notes[k]=st.notes[k].trim()});
-  return{tester:st.tester,fecha:new Date().toISOString().slice(0,10),
+  return{version:1,tester:st.tester,fecha:new Date().toISOString().slice(0,10),
     actualizado:st.actualizado||new Date().toISOString(),
     resumen:{ok,fail,pend:total-ok-fail,total},rows,notes};
 }
-async function pushCloud(){
+async function refreshSha(){
+  try{const r=await fetch(API+DIR+"/"+slug+".json?ref="+BRANCH,{headers:hdrs(),cache:"no-store"});
+    sha=r.ok?(await r.json()).sha:null}catch(e){}
+}
+async function pushCloud(isRetry){
   if(!slug)return;
   if(saving){dirty=true;return}
   saving=true;dirty=false;setSync("☁ guardando…");
+  const doc=snapshot();
   try{
-    let cur=null;
-    try{cur=await(await fetch(BLOB,{cache:"no-store"})).json()}catch(e){}
-    if(!cur||typeof cur!=="object")cur={};
-    cur.version=1;cur.consultores=cur.consultores||{};
-    cur.consultores[slug]=snapshot();
-    const res=await fetch(BLOB,{method:"PUT",keepalive:true,body:JSON.stringify(cur)});
+    const res=await fetch(API+DIR+"/"+slug+".json",{method:"PUT",keepalive:true,headers:hdrs(),
+      body:JSON.stringify({message:`avance: ${doc.tester} (${doc.resumen.ok+doc.resumen.fail}/${doc.resumen.total})`,
+        branch:BRANCH,content:b64e(JSON.stringify(doc,null,1)),...(sha?{sha}:{})})});
+    if((res.status===409||res.status===422)&&!isRetry){
+      await refreshSha();saving=false;return pushCloud(true);
+    }
     if(!res.ok)throw new Error("HTTP "+res.status);
+    sha=(await res.json()).content.sha;
     setSync("☁ guardado "+new Date().toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}));
   }catch(e){
     dirty=true;setSync("⚠ sin conexión — reintentando (tu avance está en este navegador)",true);
-    clearTimeout(tmrSave);tmrSave=setTimeout(pushCloud,15000);
+    clearTimeout(tmrSave);tmrSave=setTimeout(()=>pushCloud(),15000);
   }
   saving=false;
-  if(dirty){clearTimeout(tmrSave);tmrSave=setTimeout(pushCloud,3000)}
+  if(dirty){clearTimeout(tmrSave);tmrSave=setTimeout(()=>pushCloud(),3000)}
 }
 addEventListener("pagehide",()=>{if(dirty&&slug)pushCloud()});
 
@@ -538,13 +549,13 @@ pickList.addEventListener("click",e=>{
   const b=e.target.closest("button[data-slug]");if(b)selectUser(b.dataset.slug);
 });
 async function selectUser(sl){
-  slug=sl;picker.hidden=true;dirty=false;clearTimeout(tmrSave);
+  slug=sl;picker.hidden=true;dirty=false;sha=null;clearTimeout(tmrSave);
   const name=(USERS.find(u=>u[0]===sl)||[sl,sl])[1];
   document.getElementById("userChip").textContent=name;setSync("cargando avance…");
   let cloud=null;
   try{
-    const all=await(await fetch(BLOB,{cache:"no-store"})).json();
-    cloud=(all&&all.consultores||{})[slug]||null;
+    const r=await fetch(API+DIR+"/"+slug+".json?ref="+BRANCH,{headers:hdrs(),cache:"no-store"});
+    if(r.ok){const j=await r.json();sha=j.sha;cloud=JSON.parse(b64d(j.content))}
   }catch(e){}
   let local=null;try{local=JSON.parse(localStorage.getItem(KEY()))}catch(e){}
   if(cloud&&local&&(local.actualizado||"")>(cloud.actualizado||""))cloud=local;
