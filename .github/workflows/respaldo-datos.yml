@@ -17,7 +17,7 @@ jobs:
       - name: Descargar el almacén en vivo
         run: |
           curl -sf --retry 3 \
-            https://kvdb.io/EYNBu6XbG1FQJ8rhy2sCGF/resultados \
+            https://kvdb.io/B7a2HikMkjJjAAr1oGYPSo/resultados \
             -o /tmp/resultados.json
           python3 -m json.tool /tmp/resultados.json > /dev/null
           mkdir -p data
