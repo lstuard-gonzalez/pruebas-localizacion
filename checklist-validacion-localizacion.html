@@ -134,6 +134,25 @@ tr.st-fail .note{display:block}
 .toast.show{transform:translateX(-50%) translateY(0)}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
+
+/* ── Selector de usuario ── */
+.overlay{position:fixed;inset:0;background:rgba(20,26,33,.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:18px}
+.overlay[hidden]{display:none}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);max-width:440px;width:100%;padding:24px}
+.modal h2{margin:0 0 4px;font-size:20px;letter-spacing:-.01em}
+.modal p{color:var(--ink-soft);font-size:13.5px;margin:0 0 14px}
+.modal input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:9px 12px;font:inherit;margin-bottom:10px}
+.pick-list{max-height:250px;overflow-y:auto;margin-bottom:14px}
+.pick-list button{display:flex;width:100%;text-align:left;gap:10px;align-items:center;background:none;border:1px solid transparent;border-radius:8px;padding:8px 10px;color:var(--ink);font-size:14px}
+.pick-list button:hover{background:var(--accent-soft);border-color:var(--line)}
+.pick-list .avatar{width:27px;height:27px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:11.5px;flex:none}
+.new-user{display:flex;gap:8px}
+.new-user input{margin:0;flex:1}
+.new-user .btn{white-space:nowrap}
+.pick-msg{font-size:12.5px;color:var(--ink-soft);margin-top:10px}
+.chip{background:var(--accent-soft);color:var(--accent);font-weight:700;border-radius:20px;padding:7px 14px;font-size:13.5px}
+.sync{font-size:12.5px;color:var(--ink-soft)}
+.sync.err{color:var(--fail)}
 </style>
 </head>
 <body>
@@ -155,13 +174,15 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
     <h1>Checklist de Validación de la Localización</h1>
     <p>Cada módulo nuevo o cambiado trae su manual (qué hace, configuración, uso) y su
     checklist. Marca cada fila: <b style="color:var(--ok)">✓</b> pasó ·
-    <b style="color:var(--fail)">✗</b> falló (anota qué viste). Tu avance se guarda en este
-    navegador; al terminar, <b>Exportar resultados</b> y pégalo en el canal del proyecto.</p>
+    <b style="color:var(--fail)">✗</b> falló (anota qué viste). Tu avance se
+    <b>guarda solo</b> en el repositorio y todo el equipo lo ve en las
+    <a href="index.html">Estadísticas</a>.</p>
     <div class="meta">
-      <input id="tester" placeholder="Tu nombre (tester)" aria-label="Nombre del tester">
+      <span class="chip" id="userChip">—</span>
+      <span class="sync" id="sync"></span>
+      <button class="btn" id="btnUser">Cambiar de usuario</button>
       <button class="btn primary" id="btnExport">Exportar resultados</button>
-      <button class="btn" id="btnJson">Descargar JSON (repo)</button>
-      <button class="btn" id="btnReset">Reiniciar todo</button>
+      <button class="btn" id="btnReset">Reiniciar mi avance</button>
       <a class="btn" href="index.html">📊 Estadísticas</a>
     </div>
     <div class="warn"><b>Antes de empezar:</b> entra al staging, trabaja en la compañía
@@ -182,6 +203,13 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 </main>
 </div>
 <div class="toast" id="toast" role="status"></div>
+
+<div class="overlay" id="picker" hidden>
+  <div class="modal">
+    <h2>¿Quién eres?</h2>
+    <p>Toca tu nombre para cargar tu avance.</p>
+    <div class="pick-list" id="pickList"></div>  </div>
+</div>
 
 <script>
 const S=[
@@ -372,12 +400,57 @@ const S=[
  ["LIC-02","Factura del licor","El impuesto del ramo se calcula según la configuración"]]}
 ];
 
+/* ── Nube (almacén compartido) ── */
+const BLOB="https://jsonblob.com/api/jsonBlob/019f6739-db84-7717-994d-a507271514bd";
+const USERS=[["danny","Danny"],["chriselys","Chriselys"],["luis","Luis"]];
+
 /* ── Estado ── */
-const KEY="nks_val_v1";
-let st={}; try{st=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){st={}}
-st.rows=st.rows||{}; st.notes=st.notes||{}; st.tester=st.tester||"";
-const save=()=>localStorage.setItem(KEY,JSON.stringify(st));
-let filter="all";
+let st={rows:{},notes:{},tester:""},filter="all";
+let slug="",dirty=false,saving=false,tmrSave=null;
+const KEY=()=>"nks_val_v2_"+slug;
+const saveLocal=()=>{try{localStorage.setItem(KEY(),JSON.stringify(st))}catch(e){}};
+const save=()=>{st.actualizado=new Date().toISOString();saveLocal();queueCloud()};
+const syncEl=document.getElementById("sync");
+const setSync=(t,err)=>{syncEl.textContent=t;syncEl.className="sync"+(err?" err":"")};
+
+function queueCloud(){
+  if(!slug)return;
+  dirty=true;setSync("☁ cambios sin guardar…");
+  clearTimeout(tmrSave);tmrSave=setTimeout(pushCloud,3000);
+}
+function snapshot(){
+  let ok=0,fail=0,total=0;
+  S.forEach(sec=>sec.c.forEach(r=>{total++;const v=st.rows[r[0]];
+    if(v==="ok")ok++;else if(v==="fail")fail++}));
+  const rows={},notes={};
+  Object.keys(st.rows).forEach(k=>{if(st.rows[k])rows[k]=st.rows[k]});
+  Object.keys(st.notes).forEach(k=>{if((st.notes[k]||"").trim())notes[k]=st.notes[k].trim()});
+  return{tester:st.tester,fecha:new Date().toISOString().slice(0,10),
+    actualizado:st.actualizado||new Date().toISOString(),
+    resumen:{ok,fail,pend:total-ok-fail,total},rows,notes};
+}
+async function pushCloud(){
+  if(!slug)return;
+  if(saving){dirty=true;return}
+  saving=true;dirty=false;setSync("☁ guardando…");
+  try{
+    let cur=null;
+    try{cur=await(await fetch(BLOB,{cache:"no-store"})).json()}catch(e){}
+    if(!cur||typeof cur!=="object")cur={};
+    cur.version=1;cur.consultores=cur.consultores||{};
+    cur.consultores[slug]=snapshot();
+    const res=await fetch(BLOB,{method:"PUT",keepalive:true,
+      headers:{"Content-Type":"application/json"},body:JSON.stringify(cur)});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    setSync("☁ guardado "+new Date().toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}));
+  }catch(e){
+    dirty=true;setSync("⚠ sin conexión — reintentando (tu avance está en este navegador)",true);
+    clearTimeout(tmrSave);tmrSave=setTimeout(pushCloud,15000);
+  }
+  saving=false;
+  if(dirty){clearTimeout(tmrSave);tmrSave=setTimeout(pushCloud,3000)}
+}
+addEventListener("pagehide",()=>{if(dirty&&slug)pushCloud()});
 
 /* ── Render ── */
 const secsEl=document.getElementById("secs"),tocEl=document.getElementById("toc");
@@ -418,8 +491,6 @@ function build(){
 build();
 
 /* ── Interacción ── */
-document.getElementById("tester").value=st.tester;
-document.getElementById("tester").addEventListener("input",e=>{st.tester=e.target.value;save()});
 secsEl.addEventListener("click",e=>{
   const b=e.target.closest("button[data-set]"); if(!b)return;
   const tr=b.closest("tr"),code=tr.dataset.code,v=b.dataset.set;
@@ -435,8 +506,12 @@ document.querySelectorAll(".filters button").forEach(b=>b.addEventListener("clic
   paint();
 }));
 document.getElementById("btnReset").addEventListener("click",()=>{
-  if(!confirm("¿Borrar TODO tu avance en este navegador?"))return;
+  if(!confirm(`¿Borrar TODO el avance de ${st.tester||"este usuario"}? Se borra también en la nube.`))return;
   st={rows:{},notes:{},tester:st.tester}; save(); build(); paint(); toast("Avance reiniciado");
+});
+document.getElementById("btnUser").addEventListener("click",()=>{
+  if(dirty)pushCloud();
+  openPicker();
 });
 document.getElementById("btnExport").addEventListener("click",()=>{
   const d=new Date().toISOString().slice(0,10);
@@ -453,24 +528,34 @@ document.getElementById("btnExport").addEventListener("click",()=>{
   navigator.clipboard.writeText(out).then(()=>toast("Resultados copiados — pégalos en el canal"))
     .catch(()=>{prompt("Copia manualmente:",out)});
 });
-document.getElementById("btnJson").addEventListener("click",()=>{
-  const name=(st.tester||"").trim();
-  if(!name){toast("Escribe tu nombre antes de descargar");document.getElementById("tester").focus();return}
-  let ok=0,fail=0,total=0;
-  S.forEach(sec=>sec.c.forEach(r=>{total++;
-    if(st.rows[r[0]]==="ok")ok++;else if(st.rows[r[0]]==="fail")fail++}));
-  const rows={},notes={};
-  Object.keys(st.rows).forEach(k=>{if(st.rows[k])rows[k]=st.rows[k]});
-  Object.keys(st.notes).forEach(k=>{if((st.notes[k]||"").trim())notes[k]=st.notes[k].trim()});
-  const data={version:1,tester:name,fecha:new Date().toISOString().slice(0,10),
-    resumen:{ok,fail,pend:total-ok-fail,total},rows,notes};
-  const slug=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"consultor";
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));
-  a.download=`${slug}.json`;a.click();URL.revokeObjectURL(a.href);
-  toast("JSON descargado — súbelo a la carpeta data/ del repo");
+/* ── Selector de usuario ── */
+const picker=document.getElementById("picker"),pickList=document.getElementById("pickList");
+function openPicker(){
+  picker.hidden=false;
+  pickList.innerHTML=USERS.map(([s,n])=>
+    `<button data-slug="${s}"><span class="avatar">${n[0]}</span>${n}</button>`).join("");
+}
+pickList.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-slug]");if(b)selectUser(b.dataset.slug);
 });
+async function selectUser(sl){
+  slug=sl;picker.hidden=true;dirty=false;clearTimeout(tmrSave);
+  const name=(USERS.find(u=>u[0]===sl)||[sl,sl])[1];
+  document.getElementById("userChip").textContent=name;setSync("cargando avance…");
+  let cloud=null;
+  try{
+    const all=await(await fetch(BLOB,{cache:"no-store"})).json();
+    cloud=(all&&all.consultores||{})[slug]||null;
+  }catch(e){}
+  let local=null;try{local=JSON.parse(localStorage.getItem(KEY()))}catch(e){}
+  if(cloud&&local&&(local.actualizado||"")>(cloud.actualizado||""))cloud=local;
+  st=cloud||local||{rows:{},notes:{}};
+  st.rows=st.rows||{};st.notes=st.notes||{};st.tester=name;
+  try{localStorage.setItem("nks_last_user",slug)}catch(e){}
+  build();paint();
+  setSync(cloud?"☁ avance cargado":"listo para empezar");
+  toast(`Hola, ${name}`);
+}
 
 /* ── Pintado ── */
 function paint(){
@@ -507,6 +592,8 @@ function paint(){
 let tmr;function toast(m){const t=document.getElementById("toast");t.textContent=m;
   t.classList.add("show");clearTimeout(tmr);tmr=setTimeout(()=>t.classList.remove("show"),2600)}
 paint();
+const last=localStorage.getItem("nks_last_user");
+if(last&&USERS.some(u=>u[0]===last))selectUser(last);else openPicker();
 </script>
 
 </body>
