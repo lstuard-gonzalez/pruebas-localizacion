@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>NKS Localización — Estadísticas por consultor</title>
 <style>
 :root{
@@ -164,21 +167,22 @@ async function load(){
   document.getElementById("kpis").hidden=true;
   let files=[];
   try{
-    const r=await fetch(API+DIR+"?ref="+BRANCH,{headers:hdrs(),cache:"no-store"});
-    if(!r.ok)throw new Error("HTTP "+r.status);
+    const r=await fetch(API+DIR+"?ref="+BRANCH+"&t="+Date.now(),{headers:hdrs(),cache:"no-store"});
+    if(!r.ok)throw new Error("La API de GitHub respondió "+r.status+" al listar data/");
     files=(await r.json()).filter(f=>f.type==="file"&&f.name.endsWith(".json")&&!f.name.startsWith("_"));
   }catch(e){
     out.innerHTML=`<div class="msg"><b>No pude leer los datos.</b><br>
-      Revisa tu conexión y pulsa <b>↻ Actualizar</b>.</div>`;
+      ${esc(e.message||e)}<br><br>
+      Si esto persiste, recarga con <b>Ctrl+Shift+R</b> (fuerza la versión nueva) y vuelve a intentar.</div>`;
     return;
   }
-  const people=[];
+  const people=[],errores=[];
   await Promise.all(files.map(async f=>{
     try{
-      const j=await(await fetch(API+DIR+"/"+f.name+"?ref="+BRANCH,{headers:hdrs(),cache:"no-store"})).json();
+      const j=await(await fetch(API+DIR+"/"+f.name+"?ref="+BRANCH+"&t="+Date.now(),{headers:hdrs(),cache:"no-store"})).json();
       const d=JSON.parse(b64d(j.content));
       if(d&&d.rows)people.push({slug:f.name.replace(/\.json$/,""),...d});
-    }catch(e){}
+    }catch(e){errores.push(f.name)}
   }));
   if(!people.length){
     out.innerHTML=`<div class="msg"><b>Aún no hay avances registrados.</b><br>
