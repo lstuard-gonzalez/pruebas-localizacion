@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NKS Localización — Validación</title>
+<style>
+:root{
+  --bg:#FAF9F7; --surface:#FFFFFF; --ink:#1C2733; --ink-soft:#5B6570; --line:#E5E1DA;
+  --accent:#E85D1F; --accent-soft:#FBEDE4;
+  --ok:#1E8E5A; --ok-soft:#E3F2EA; --fail:#C43D3D; --fail-soft:#F9E7E7;
+  --code-bg:#F0EEE9; --shadow:0 1px 3px rgba(28,39,51,.07),0 4px 14px rgba(28,39,51,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141A21; --surface:#1C242E; --ink:#E9E6E1; --ink-soft:#9AA3AD; --line:#2C3641;
+    --accent:#F0722F; --accent-soft:#33261D;
+    --ok:#3DB57F; --ok-soft:#1B2F26; --fail:#E06767; --fail-soft:#35211F;
+    --code-bg:#242E39; --shadow:0 1px 3px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#FAF9F7; --surface:#FFFFFF; --ink:#1C2733; --ink-soft:#5B6570; --line:#E5E1DA;
+  --accent:#E85D1F; --accent-soft:#FBEDE4;
+  --ok:#1E8E5A; --ok-soft:#E3F2EA; --fail:#C43D3D; --fail-soft:#F9E7E7;
+  --code-bg:#F0EEE9; --shadow:0 1px 3px rgba(28,39,51,.07),0 4px 14px rgba(28,39,51,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#141A21; --surface:#1C242E; --ink:#E9E6E1; --ink-soft:#9AA3AD; --line:#2C3641;
+  --accent:#F0722F; --accent-soft:#33261D;
+  --ok:#3DB57F; --ok-soft:#1B2F26; --fail:#E06767; --fail-soft:#35211F;
+  --code-bg:#242E39; --shadow:0 1px 3px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif;}
+.mono{font-family:ui-monospace,"Cascadia Code",Consolas,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent);text-decoration:none}
+button{font:inherit;cursor:pointer}
+
+/* ── Layout ── */
+.app{display:grid;grid-template-columns:290px 1fr;min-height:100vh}
+.side{border-right:1px solid var(--line);padding:22px 18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{padding:26px clamp(18px,4vw,52px);max-width:1060px}
+@media(max-width:900px){.app{grid-template-columns:1fr}.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}}
+
+/* ── Sidebar ── */
+.brand{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.brand b{font-size:17px;letter-spacing:.02em}
+.brand span{color:var(--accent);font-weight:700}
+.side .sub{color:var(--ink-soft);font-size:12px;margin-bottom:18px}
+.global{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px;box-shadow:var(--shadow)}
+.global .nums{display:flex;justify-content:space-between;align-items:baseline}
+.global .pct{font-size:26px;font-weight:700}
+.global .detail{font-size:12px;color:var(--ink-soft)}
+.bar{height:6px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .b-ok{background:var(--ok)} .bar .b-fail{background:var(--fail)}
+.toc{list-style:none;margin:0;padding:0}
+.toc li{margin:1px 0}
+.toc a{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;color:var(--ink);font-size:13px}
+.toc a:hover{background:var(--accent-soft)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.dot.done{background:var(--ok)} .dot.part{background:var(--accent)} .dot.bad{background:var(--fail)}
+.toc .n{color:var(--ink-soft);font-size:11px;margin-left:auto}
+
+/* ── Header main ── */
+.head h1{font-size:clamp(22px,3vw,30px);margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+.head p{color:var(--ink-soft);max-width:68ch;margin:0 0 14px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+.meta input{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:8px 12px;font:inherit;width:230px}
+.meta .btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px}
+.meta .btn:hover{border-color:var(--accent);color:var(--accent)}
+.meta .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.meta .btn.primary:hover{filter:brightness(1.06);color:#fff}
+.warn{border-left:3px solid var(--accent);background:var(--surface);border-radius:0 10px 10px 0;
+  padding:10px 16px;font-size:13.5px;color:var(--ink-soft);margin:14px 0 4px;box-shadow:var(--shadow)}
+.warn b{color:var(--ink)}
+.filters{display:flex;gap:6px;margin:18px 0 6px}
+.filters button{border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:5px 14px;font-size:12.5px}
+.filters button.on{background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:600}
+
+/* ── Sección ── */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin:22px 0;box-shadow:var(--shadow);overflow:hidden}
+.sec-h{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 20px 12px}
+.sec-h h2{font-size:17.5px;margin:0;letter-spacing:-.01em}
+.sec-h .mod{font-size:12px;color:var(--ink-soft)}
+.badge{font-size:10.5px;font-weight:700;letter-spacing:.06em;border-radius:4px;padding:2px 7px}
+.badge.nuevo{background:var(--accent-soft);color:var(--accent)}
+.badge.cambio{background:var(--code-bg);color:var(--ink-soft)}
+.sec-h .prog{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-soft)}
+.sec-h .prog .bar{width:110px;margin:0}
+.purpose{padding:0 20px 8px;color:var(--ink-soft);font-size:13.8px;max-width:78ch}
+details.manual{margin:0 20px 10px;border:1px dashed var(--line);border-radius:9px}
+details.manual summary{cursor:pointer;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--accent);
+  text-transform:uppercase;letter-spacing:.05em;list-style:none}
+details.manual summary::-webkit-details-marker{display:none}
+details.manual summary::before{content:"▸ "} details.manual[open] summary::before{content:"▾ "}
+.man-body{padding:2px 18px 14px;display:grid;gap:12px;grid-template-columns:1fr 1fr;font-size:13.5px}
+@media(max-width:760px){.man-body{grid-template-columns:1fr}}
+.man-body h4{margin:0 0 6px;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft)}
+.man-body ol{margin:0;padding-left:20px}
+.man-body li{margin:4px 0}
+
+/* ── Checklist ── */
+table{width:100%;border-collapse:collapse;font-size:13.8px}
+.tbl-wrap{overflow-x:auto}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);text-align:left;
+  padding:8px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr.st-ok{background:var(--ok-soft)} tr.st-fail{background:var(--fail-soft)}
+.code{font-size:12px;background:var(--code-bg);border-radius:5px;padding:2px 7px;white-space:nowrap;font-weight:600}
+.exp{color:var(--ink-soft)}
+.tri{display:flex;gap:4px}
+.tri button{width:34px;height:30px;border-radius:7px;border:1px solid var(--line);background:transparent;
+  color:var(--ink-soft);font-size:14px;line-height:1}
+.tri button:hover{border-color:var(--ink-soft)}
+.tri button.on-ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.tri button.on-fail{background:var(--fail);border-color:var(--fail);color:#fff}
+.note{display:none;margin-top:6px}
+tr.st-fail .note{display:block}
+.note input{width:100%;background:var(--surface);border:1px solid var(--fail);border-radius:6px;
+  color:var(--ink);padding:5px 9px;font-size:12.5px}
+.note input::placeholder{color:var(--ink-soft)}
+
+/* ── Footer / misc ── */
+.foot{margin:40px 0 20px;padding-top:16px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:var(--ink-soft);font-size:12.5px}
+.foot b{color:var(--accent)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--ink);color:var(--bg);padding:10px 20px;border-radius:9px;font-size:13.5px;
+  transition:transform .25s;box-shadow:var(--shadow);z-index:50}
+.toast.show{transform:translateX(-50%) translateY(0)}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+<nav class="side">
+  <div class="brand"><b>NIKKO<span>SOFT</span></b></div>
+  <div class="sub">NKS Full Localización · <span class="mono">18.0-refactor</span><br>Validación funcional (sin nómina)</div>
+  <div class="global">
+    <div class="nums"><span class="pct" id="gPct">0%</span><span class="detail" id="gDetail">0/0</span></div>
+    <div class="bar"><i class="b-ok" id="gBarOk"></i><i class="b-fail" id="gBarFail"></i></div>
+  </div>
+  <ul class="toc" id="toc"></ul>
+</nav>
+
+<main class="main">
+  <header class="head">
+    <h1>Checklist de Validación de la Localización</h1>
+    <p>Cada módulo nuevo o cambiado trae su manual (qué hace, configuración, uso) y su
+    checklist. Marca cada fila: <b style="color:var(--ok)">✓</b> pasó ·
+    <b style="color:var(--fail)">✗</b> falló (anota qué viste). Tu avance se guarda en este
+    navegador; al terminar, <b>Exportar resultados</b> y pégalo en el canal del proyecto.</p>
+    <div class="meta">
+      <input id="tester" placeholder="Tu nombre (tester)" aria-label="Nombre del tester">
+      <button class="btn primary" id="btnExport">Exportar resultados</button>
+      <button class="btn" id="btnReset">Reiniciar todo</button>
+    </div>
+    <div class="warn"><b>Antes de empezar:</b> entra al staging, trabaja en la compañía
+    <b>Nikkosoft Prueba</b> (salvo indicación) con permisos de Contable + Inventario.
+    <b>Severidad máxima</b> — repórtalo de inmediato: asiento que no cuadre en Bs o USD,
+    número de control duplicado o saltado, o un error del servidor.</div>
+    <div class="filters" role="group" aria-label="Filtro">
+      <button data-f="all" class="on">Todo</button>
+      <button data-f="pend">Pendientes</button>
+      <button data-f="fail">Fallas</button>
+    </div>
+  </header>
+  <div id="secs"></div>
+  <footer class="foot">
+    <span>Una sección queda validada cuando todas sus filas están marcadas y cada ✗ tiene su nota.</span>
+    <span><b>NIKKOSOFT</b> CONSULTORES C.A. · 2026</span>
+  </footer>
+</main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const S=[
+{id:"dual",t:"§1 · Dualidad Monetaria",mod:"account_dual_currency",b:"cambio",
+ p:"Toda la contabilidad vive en Bs y se re-expresa en USD. Cada documento congela su tasa BCV. El lado USD deriva de una sola doctrina con 3 lentes: Documento (tasa histórica), Día (tasa de la fecha del reporte) y Mercado (informativa).",
+ cfg:["Ajustes → Contabilidad → Dual Currency: moneda de referencia = USD.","Contabilidad → Configuración → Monedas → USD: activa y con la tasa BCV de hoy (el cron la trae solo)."],
+ uso:["Factura de cliente en USD → la Tasa se llena con la BCV (editable antes de validar).","Validar → abrir el asiento: cada apunte en Bs y su columna USD.","Informes → Libro Mayor → selector de moneda USD y selector de lente."],
+ c:[["DUAL-01","Factura USD 100 con tasa 100 → totales","Total Bs = 10.000 · total USD = 100"],
+ ["DUAL-02","Cambiar la tasa manual antes de validar","Los montos Bs se recalculan al instante"],
+ ["DUAL-03","Asiento de la factura","Débito = Crédito en Bs Y en USD (cuadre dual)"],
+ ["DUAL-04","Registrar pago con tasa distinta","El pago usa SU tasa; la factura queda saldada"],
+ ["DUAL-05","Libro Mayor en USD, lente Documento","Cada línea a la tasa histórica de su asiento"],
+ ["DUAL-06","Libro Mayor en USD, lente Día","Todo re-expresado a la tasa de hoy"],
+ ["DUAL-07","Cron de tasas","Tasa BCV nueva en USD sin intervención"],
+ ["DUAL-08","Compañía foránea: crear factura","No exige tasa dual ni aplica lo fiscal VE"]]},
+{id:"ret",t:"§2 · Retenciones clásicas (3 flancos)",mod:"l10n_ve_full · ADR-017",b:"cambio",
+ p:"Retenciones IVA (75/100%), ISLR (Dcto. 1.808) y municipal, como agente y como contribuyente. Cambio ADR-017: la retención soportada (nos retienen) tiene UN solo motor — 'Retenciones recibidas' es una bandeja de captura que alimenta el comprobante de venta; nada asienta dos veces.",
+ cfg:["Ajustes → Contabilidad → Retenciones VE: cuentas y diarios de IVA/ISLR/municipal.","Proveedor → pestaña Contabilidad: % retención IVA (75/100) y conceptos ISLR.","Municipal: tabla de tarifas de patente + activar en la compañía."],
+ uso:["Agente: factura de proveedor con IVA → generar comprobante de retención → confirmar.","ISLR: factura de servicio → documento de retención por concepto → XML/TXT SENIAT.","Soportado (ADR-017): Clientes → Retenciones recibidas → capturar el comprobante del cliente → confirmar → genera el comprobante de venta."],
+ c:[["RET-01","Retención IVA 75% sobre base 1.000 + IVA 160","Comprobante por 120 (75% de 160)"],
+ ["RET-02","Proveedor al 100%","Retiene 160 completo"],
+ ["RET-03","Asiento del comprobante","Cuadra en Bs y USD; usa la cuenta configurada"],
+ ["RET-04","ISLR por concepto (honorarios PJ)","Tarifa correcta según tipo de persona; sustraendo aplicado"],
+ ["RET-05","TXT IVA SENIAT del período","Incluye los comprobantes confirmados, formato correcto"],
+ ["RET-06","Municipal: factura de actividad gravada","Base SIN IVA (LOPPM 216.1) × tarifa"],
+ ["RET-07","ADR-017: capturar retención recibida","UN solo comprobante de venta; NO duplica asiento"],
+ ["RET-08","Retención recibida en Libro de Ventas","Sí, con el número del comprobante del cliente"],
+ ["RET-09","Retener dos veces la misma factura","Bloqueado con mensaje claro"]]},
+{id:"rp",t:"§3 · Retención EN el pago + Portal",mod:"l10n_ve_withholding (+portal)",b:"nuevo",
+ p:"Estilo Profit Plus: al pagar, el wizard calcula y descuenta la retención automáticamente. El portal deja al proveedor descargar sus comprobantes con la marca del cliente.",
+ cfg:["Ajustes → Contabilidad → Retención en el pago: activar por tipo y asignar cuenta + impuesto técnico.","Contactos → proveedor → Conceder acceso al portal."],
+ uso:["Factura de proveedor validada → Registrar pago → el wizard muestra retención y neto.","Confirmar → pago neto + comprobante en un solo flujo.","Portal: el proveedor entra → Mis retenciones → descarga PDF."],
+ c:[["RP-01","Pago de 1.160 (IVA 160) con retención 75% activa","Neto pagado 1.040; retención 120"],
+ ["RP-02","Comprobante generado desde el pago","Correlativo y asiento cuadrado (Bs y USD)"],
+ ["RP-03","Desactivar el flag por compañía","El wizard paga completo, sin retención"],
+ ["RP-04","Portal del proveedor","Ve SOLO sus comprobantes; PDF con marca del cliente"],
+ ["RP-05","Compañía foránea","El wizard no ofrece retención"]]},
+{id:"mc",t:"§4 · Multi-compañía de productos",mod:"nks_base/product_multi_company",b:"nuevo",
+ p:"Registros base (productos, y los modelos que se adhieran) pueden pertenecer a VARIAS compañías a la vez, en vez de 'una o todas'.",
+ cfg:["Instalar ambos módulos; en el producto aparece el campo Compañías (múltiple)."],
+ uso:["Producto → Información general → Compañías: elegir 2 de las 4 del staging."],
+ c:[["MC-01","Producto asignado a Compañía A y B","Visible en A y B; invisible en C"],
+ ["MC-02","Producto sin compañías","Visible en todas (global)"],
+ ["MC-03","Usuario mono-compañía usa producto ajeno","Bloqueado por regla de registro"],
+ ["MC-04","Facturar el producto compartido en A y en B","Ambas facturas validan sin error de compañía"]]},
+{id:"nc",t:"§5 · Números de Control",mod:"nikko_control_number",b:"cambio",
+ p:"El correlativo legal SENIAT, ahora con: medio de emisión fiscal POR DIARIO (forma libre / digital / impresora fiscal / contingencia), serie por diario = sucursal ('00-', '01-') con fallback a compañía, y guía de despacho con número propio y serie por almacén.",
+ cfg:["Contabilidad → Configuración → Números de Control: config por defecto; para una sucursal, línea con Diario + secuencia de prefijo propio.","Para la guía: línea tipo Guía de Despacho (almacén vacío = serie única de compañía).","Cada diario de venta → Ajustes avanzados → Emisión Fiscal (Venezuela) → Tipo de emisión."],
+ uso:["Diario forma libre → al validar recibe Nro. Control de su serie.","Diario digital → valida SIN número (lo asigna la imprenta al emitir).","Diario contingencia → exige el número del talonario.","Entrega de inventario → al validar recibe número de guía."],
+ c:[["NC-01","Factura en diario forma libre","Nro. control correlativo de su serie"],
+ ["NC-02","Factura+ND+NC con secuencia compartida","Un solo correlativo entre los 3 tipos"],
+ ["NC-03","Dos diarios con series 00- y 01-","Correlativos independientes, prefijo correcto"],
+ ["NC-04","Crear dos series con prefijos que choquen (0 y 00)","Bloqueado con mensaje claro"],
+ ["NC-05","Diario digital: validar factura","Sin nro. de control local (queda para la imprenta)"],
+ ["NC-06","Diario contingencia sin número manual","Bloquea la validación pidiendo el número"],
+ ["NC-07","Validar entrega (salida) con config de guía","La guía recibe su número (serie del almacén o compañía)"],
+ ["NC-08","Validar una recepción","NO recibe número de guía"],
+ ["NC-09","Almacén con serie propia vs sin serie","El primero numera con la suya; el segundo con la de compañía"],
+ ["NC-10","Duplicar una factura","La copia nace SIN número de control"],
+ ["NC-11","Compañía foránea","No asigna números de control"]]},
+{id:"efd",t:"§6 · Facturación Digital",mod:"nks_einvoice_ve",b:"nuevo",
+ p:"Emite factura, NC/ND, guía y comprobantes de retención a la imprenta digital (Prov. 102), desde 'Enviar e Imprimir'. Cola con reintentos, log de auditoría, dashboard. El número que asigna la imprenta aterriza en el Nro. Control del documento.",
+ cfg:["Ajustes → Facturación Digital: activar el interruptor maestro de la compañía.","Contabilidad → Emisión Fiscal → Configuración: proveedor, ambiente, credenciales, serie.","Diarios del canal digital en Tipo de emisión = Facturación digital.","Guías digitales: en el cliente, activar Guía Digital Habilitada."],
+ uso:["Factura en diario digital → Enviar e Imprimir → marcar Factura Digital (SENIAT).","La factura muestra estado de emisión y, al emitirse, el número de la imprenta + URL.","Contabilidad → Emisión Fiscal: dashboard, cola, log."],
+ c:[["EFD-01","Enviar e Imprimir en diario digital","Aparece la opción Factura Digital (SENIAT)"],
+ ["EFD-02","Diario forma libre","NO aparece la opción digital"],
+ ["EFD-03","Interruptor maestro apagado","Ningún diario ofrece digital"],
+ ["EFD-04","Emisión exitosa (o simulada)","Nro. Control = número de la imprenta; estado Emitido"],
+ ["EFD-05","Factura emitida en el Libro de Ventas","Sale con el número de la imprenta"],
+ ["EFD-06","Error de emisión","Estado Error con mensaje; reintento por cron; la contabilidad NO se afecta"],
+ ["EFD-07","Cliente 'solo Bolívares'","El documento digital va sin bloque USD"],
+ ["EFD-08","Log de emisión","Cada intento con payload/respuesta; no editable"]]},
+{id:"cob",t:"§7 · Cobros Distribuidos",mod:"nikko_cobros_clientes",b:"cambio",
+ p:"UN cobro global del cliente contra N facturas, mezclando pagos nuevos, créditos existentes y NC. El diferencial cambiario (tasa factura vs tasa cobro) se materializa como ND/NC fiscal con IVA por línea; si es < 1 Bs, asiento directo. El excedente queda como saldo a favor.",
+ cfg:["Ajustes → Contabilidad → Cobros Distribuidos NKS: diario de ND/NC del diferencial e impuesto exento por defecto."],
+ uso:["Contabilidad → Clientes → Cobros Distribuidos → Nuevo (cliente, moneda, monto, tasa).","Pestaña Cobros: líneas de pago (nuevo o crédito existente).","Pestaña Asignación de Documentos: facturas/NC a saldar.","Confirmar → Validar → revisar smart buttons (facturas, pagos, ND)."],
+ c:[["COB-01","Cobro USD contra 2 facturas a tasa vieja","Facturas en Pagado; ND por el diferencial con IVA por línea"],
+ ["COB-02","ND del diferencial","Tiene número de control y cuadra en Bs y USD"],
+ ["COB-03","Diferencial < 1 Bs","NO genera ND: asiento directo"],
+ ["COB-04","Cobro mayor que lo asignado","Excedente = saldo a favor del cliente"],
+ ["COB-05","Usar ese saldo a favor en un cobro nuevo","Se aplica como crédito existente"],
+ ["COB-06","Cobro con NC del cliente en las líneas","La NC resta del neto y se concilia"],
+ ["COB-07","Cobro en divisa con IGTF","Línea IGTF en el pago; todo cuadra"],
+ ["COB-08","Cancelar cobro validado (gerente)","Facturas reabiertas; ND revertida; pagos eliminados"],
+ ["COB-09","Usuario NO gerente intenta cancelar validado","Bloqueado"],
+ ["COB-10","Validar dos veces (doble clic)","Idempotente: no duplica pagos ni ND"]]},
+{id:"ant",t:"§8 · Anticipos",mod:"nks_anticipos",b:"nuevo",
+ p:"Anticipos de cliente y a proveedor SIN factura, sobre el pago nativo. Saldo disponible, aplicación posterior a facturas, estados borrador/publicado/parcial/aplicado; IGTF si es en divisa.",
+ cfg:["Sin configuración especial (usa diarios de pago). Todo usuario de Facturación lo ve; los gestores contables cancelan."],
+ uso:["Clientes → Anticipos de cliente → Nuevo → Publicar (crea y postea el pago).","Botón Aplicar → elegir facturas → el saldo baja y el estado avanza.","Proveedores → Anticipos a proveedor: espejo exacto."],
+ c:[["ANT-01","Anticipo cliente USD 100 publicado","Pago creado; saldo disponible 100 USD (no Bs)"],
+ ["ANT-02","Aplicar a factura de 60","Estado Parcial, saldo 40"],
+ ["ANT-03","Aplicar el resto a otra factura","Estado Aplicado, saldo 0"],
+ ["ANT-04","Aplicar dos veces a la misma factura","Idempotente, no duplica"],
+ ["ANT-05","Anticipo a proveedor","Flujo espejo completo"],
+ ["ANT-06","Anticipo en divisa con IGTF","El pago lleva su IGTF"],
+ ["ANT-07","Cancelar con saldo ya aplicado","Bloqueado o reversa limpia; nunca descuadre"]]},
+{id:"imp",t:"§9 · Importaciones",mod:"nks_importaciones + 4 satélites",b:"nuevo",
+ p:"Expediente de importación completo (7 estados) sobre costos en destino nativos: catálogo arancelario, exoneraciones, permisología con vigencias, tributos (arancel sobre CIF a tasa DUA, tasa de régimen 1%, IVA deducible o al costo), distribución multi-criterio, costo provisional y reliquidación, ISLR al exterior, puente al Libro de Compras.",
+ cfg:["Ajustes → Importaciones: impuesto de IVA de importación, % tasa de régimen (1.0), default IVA no deducible.","Configuración: catálogo arancelario, exoneraciones (decreto+vigencia+%), tipos de permiso por régimen.","En el producto: su código arancelario."],
+ uso:["OC al proveedor del exterior → confirmar → recibir.","Importaciones → Expedientes → Nuevo → vincular la OC → incoterm y moneda.","Confirmar embarque → Llegada a puerto → capturar datos del DUA (número, planilla, fecha, tasa).","Cargar costos → Liquidar tributos → distribuir al inventario → cerrar (o reliquidar después)."],
+ c:[["IMP-01","CIF 10.000 USD, tasa DUA 50, arancel 20%","Base 500.000 Bs; arancel 100.000 Bs"],
+ ["IMP-02","Tasa de régimen","1% del CIF en Bs (5.000)"],
+ ["IMP-03","IVA de importación deducible","Va a crédito fiscal, NO al costo"],
+ ["IMP-04","Marcar IVA no deducible (Art. 33)","El IVA se suma al costo del producto"],
+ ["IMP-05","Producto régimen 3 sin registro sanitario","Aviso de permiso faltante; NO bloquea"],
+ ["IMP-06","Permiso vigente registrado","El aviso desaparece; vencido vuelve a avisar"],
+ ["IMP-07","Exoneración 90% vigente en la partida","El arancel baja al 10%; vencida NO aplica"],
+ ["IMP-08","Distribución por peso entre 2 productos","El pesado absorbe más costo"],
+ ["IMP-09","Vender producto de expediente provisional","Aviso de costo provisional en el pedido"],
+ ["IMP-10","Reliquidar tras la venta parcial","Ajuste al costo de lo vendido (asiento)"],
+ ["IMP-11","Factura de flete del exterior","Retención ISLR automática (Dcto. 1.808)"],
+ ["IMP-12","Libro de Compras del mes","La importación con formato de importación"]]},
+{id:"s2p",t:"§10 · Pedido → Compra",mod:"nks_sale_to_purchase",b:"nuevo",
+ p:"Desde el pedido de venta genera la orden de compra al proveedor elegido por línea.",
+ cfg:["Ajustes → Ventas → activar Pedido a Compra.","Producto con proveedores en su ficha (pestaña Compra) y ruta configurada."],
+ uso:["Pedido de venta → en la línea, elegir proveedor → confirmar → se crea la OC enlazada."],
+ c:[["S2P-01","Confirmar pedido con proveedor elegido","OC a ESE proveedor, enlazada al pedido"],
+ ["S2P-02","2 líneas con proveedores distintos","2 OCs, una por proveedor"],
+ ["S2P-03","Línea sin proveedor elegido","Usa el proveedor por defecto del producto"],
+ ["S2P-04","Flag de compañía apagado","No genera OC"]]},
+{id:"bh",t:"§11 · Tesorería bancaria",mod:"l10n_ve_bank_hub + bank_format",b:"nuevo",
+ p:"Catálogo de bancos VE, credenciales cifradas, lotes de pago a proveedores con separación de funciones (quien monta NO aprueba) y TXT de dispersión por banco.",
+ cfg:["Tesorería → Bancos: banco pagador (formato TXT, cuenta).","Grupos Montador y Aprobador a usuarios DISTINTOS."],
+ uso:["Tesorería → Lotes de pago → Nuevo → facturas de proveedor.","Montar (montador) → Aprobar (aprobador) → descargar TXT."],
+ c:[["BH-01","Montar lote con 3 facturas","Total correcto; estado Montado"],
+ ["BH-02","El MISMO usuario aprueba su lote","Bloqueado (maker-checker)"],
+ ["BH-03","Aprobar con otro usuario","Aprobado; TXT descargable"],
+ ["BH-04","TXT generado","Estructura del banco correcta (cuenta, RIF, montos)"],
+ ["BH-05","Auditoría del lote","Chatter registra quién montó y quién aprobó"]]},
+{id:"mkt",t:"§12 · Tasa de mercado",mod:"nks_market_rates",b:"nuevo",
+ p:"Tercera moneda informativa (USD a tasa de mercado) SOLO para dashboards y reportes. La contabilidad nunca la usa.",
+ cfg:["Ajustes → activar Tasas de mercado; métrica y desviación máxima."],
+ uso:["Elegir el lente Mercado en un reporte y comparar contra el lente Documento."],
+ c:[["MKT-01","Lente Mercado en un reporte","Montos a tasa de mercado, distintos del lente Documento"],
+ ["MKT-02","Ver un asiento contable","En Bs/tasa BCV; la tasa de mercado NO aparece en asientos"],
+ ["MKT-03","Desactivar el flag","El lente mercado desaparece de los selectores"]]},
+{id:"isae",t:"§13 · ISAE / Patente municipal",mod:"l10n_ve_isae",b:"nuevo",
+ p:"Declaración periódica del impuesto municipal: base = lo COBRADO en el período (percibido) × alícuota, contra el mínimo tributable (paga el mayor). Genera el asiento.",
+ cfg:["Ajustes → ISAE: cuenta de gasto, por pagar, diario, alícuota y mínimo de la ordenanza."],
+ uso:["Contabilidad → Declaraciones → ISAE → Nueva → período → Calcular → Confirmar."],
+ c:[["ISAE-01","Cobros del período 10.000 (sin IVA), alícuota 1%","Impuesto 100"],
+ ["ISAE-02","Impuesto calculado < mínimo tributable","Paga el mínimo"],
+ ["ISAE-03","Factura emitida pero NO cobrada en el período","NO entra en la base (percibido)"],
+ ["ISAE-04","Asiento de la declaración","Gasto vs por pagar, cuadre dual"]]},
+{id:"rq",t:"§14 · RESQUIMCF",mod:"l10n_ve_resquimcf",b:"nuevo",
+ p:"Resumen de compras/ventas por TIPO de documento (Factura/ND/NC) con bases e impuestos.",
+ cfg:["Sin configuración: Contabilidad → Informes → RESQUIMCF."],
+ uso:["Elegir período → generar → revisar subtotales por tipo."],
+ c:[["RQ-01","Mes con facturas, ND y NC","Tres grupos con subtotales correctos"],
+ ["RQ-02","Las NC restan","Totales netos descuentan las NC"],
+ ["RQ-03","Cruce contra Libro de Ventas","Totales consistentes entre ambos"]]},
+{id:"bd",t:"§15 · Carga histórica",mod:"nks_backdating",b:"cambio",
+ p:"Registrar ventas, entregas, facturas y órdenes de producción con fechas pasadas (migraciones), manteniendo numeración y contabilidad coherentes.",
+ cfg:["Ajustes → activar Carga Histórica (solo durante la migración; apagar al terminar)."],
+ uso:["Crear una factura con fecha del mes pasado y validar."],
+ c:[["BD-01","Factura con fecha del mes pasado","Asiento y libro en ese mes"],
+ ["BD-02","Entrega con fecha pasada","Movimiento de stock a esa fecha"],
+ ["BD-03","Flag apagado","Vuelve el comportamiento estándar de fechas"]]},
+{id:"fr",t:"§16 · Restricciones fiscales",mod:"nks_vzla_fiscal_restr",b:"nuevo",
+ p:"El guardián SENIAT: bloquea la edición de documentos fiscales validados, banner de estado fiscal en ventas (alerta escalada por período de IVA) e IGTF informativo.",
+ cfg:["Activo por defecto en compañías VE; nada que configurar para probar."],
+ uso:["Intentar editar una factura validada; observar el banner en pedidos/facturas."],
+ c:[["FR-01","Editar factura validada (campos fiscales)","Bloqueado con mensaje"],
+ ["FR-02","Banner en pedidos/facturas","Visible con el estado del período fiscal"],
+ ["FR-03","Compañía foránea","Sin restricciones ni banner"]]},
+{id:"sec",t:"§17 · Plataforma (Access + Security + Maestros)",mod:"nks_access_control · nks_security_center · l10n_ve_nikkosoft_master",b:"nuevo",
+ p:"Access PRO: perfiles que ocultan/restringen campos, menús, botones y vistas por grupo, sin Studio. Security PRO: auditoría de logins, firewall de IPs, bloqueo de modo desarrollador. Maestros: plan de cuentas/bancos/impuestos NIKKOSOFT.",
+ cfg:["Configuración → NKS Access → Perfiles: crear un perfil restrictivo y asignarlo a un grupo.","Configuración → NKS Security: revisar log de sesiones y reglas."],
+ uso:["Entrar con un usuario de prueba del grupo restringido y verificar los efectos."],
+ c:[["SEC-01","Perfil que oculta un menú a un grupo","El usuario de prueba deja de verlo"],
+ ["SEC-02","Perfil que vuelve un campo solo-lectura","El campo no se edita para ese grupo"],
+ ["SEC-03","Log de sesiones","Registra usuario, IP y fecha de cada login"],
+ ["SEC-04","Bloqueo de modo desarrollador","?debug=1 no activa devtools para ese usuario"],
+ ["SEC-05","Plan de cuentas maestro","Cuentas NIKKOSOFT presentes con impuestos mapeados"]]},
+{id:"dash",t:"§18 · Analítica",mod:"nks_ventas_dashboard + tableros por lente",b:"nuevo",
+ p:"Cubo/pivote de ventas (cliente × producto × mes, Bs/USD, incluye migradas) y tableros con variantes por lente de moneda en el panel lateral.",
+ cfg:["Sin configuración: los tableros ya traen sus variantes."],
+ uso:["Abrir el cubo de ventas y cruzar cliente × mes en USD; alternar variantes en un tablero."],
+ c:[["DASH-01","Cubo: cliente × mes en USD","Totales consistentes con las facturas"],
+ ["DASH-02","Variante USD documento vs USD día","Montos difieren coherentemente con las tasas"],
+ ["DASH-03","Facturas migradas","Aparecen en el cubo"]]},
+{id:"lic",t:"§19 · Licores",mod:"nikko_licores_ve",b:"nuevo",
+ p:"Impuesto del ramo de licores (LIAE) por grado alcohólico / PVP, con los datos del registro de licores en el producto.",
+ cfg:["Producto de licor: completar los datos LIAE (grado, registro)."],
+ uso:["Facturar el licor y revisar el cálculo del impuesto del ramo."],
+ c:[["LIC-01","Producto de licor con datos LIAE","Campos de grado/registro visibles y obligatorios donde aplique"],
+ ["LIC-02","Factura del licor","El impuesto del ramo se calcula según la configuración"]]}
+];
+
+/* ── Estado ── */
+const KEY="nks_val_v1";
+let st={}; try{st=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){st={}}
+st.rows=st.rows||{}; st.notes=st.notes||{}; st.tester=st.tester||"";
+const save=()=>localStorage.setItem(KEY,JSON.stringify(st));
+let filter="all";
+
+/* ── Render ── */
+const secsEl=document.getElementById("secs"),tocEl=document.getElementById("toc");
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function build(){
+  secsEl.innerHTML=S.map(sec=>`
+  <section class="sec" id="${sec.id}">
+    <div class="sec-h">
+      <h2>${esc(sec.t)}</h2>
+      <span class="badge ${sec.b}">${sec.b==="nuevo"?"NUEVO":"CAMBIO"}</span>
+      <span class="mod mono">${esc(sec.mod)}</span>
+      <span class="prog"><span class="mono" id="p-${sec.id}"></span><span class="bar"><i class="b-ok" id="pbo-${sec.id}"></i><i class="b-fail" id="pbf-${sec.id}"></i></span></span>
+    </div>
+    <p class="purpose">${esc(sec.p)}</p>
+    <details class="manual"><summary>Configuración y manual de uso</summary>
+      <div class="man-body">
+        <div><h4>Configuración</h4><ol>${sec.cfg.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>
+        <div><h4>Cómo se usa</h4><ol>${sec.uso.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></div>
+      </div>
+    </details>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th style="width:92px">Código</th><th>Verificación</th><th>Resultado esperado</th><th style="width:86px">Estado</th></tr></thead>
+      <tbody>${sec.c.map(r=>`
+        <tr data-code="${r[0]}">
+          <td><span class="code mono">${r[0]}</span></td>
+          <td>${esc(r[1])}<div class="note"><input placeholder="¿Qué viste? (obligatorio para reportar)" data-note="${r[0]}" value="${esc(st.notes[r[0]]||"")}"></div></td>
+          <td class="exp">${esc(r[2])}</td>
+          <td><div class="tri" role="group" aria-label="Estado ${r[0]}">
+            <button data-set="ok" title="Pasó" aria-label="${r[0]} pasó">✓</button>
+            <button data-set="fail" title="Falló" aria-label="${r[0]} falló">✗</button>
+          </div></td>
+        </tr>`).join("")}
+      </tbody>
+    </table></div>
+  </section>`).join("");
+  tocEl.innerHTML=S.map(s=>`<li><a href="#${s.id}"><span class="dot" id="d-${s.id}"></span>${esc(s.t.replace(/§\d+ · /,""))}<span class="n mono" id="n-${s.id}"></span></a></li>`).join("");
+}
+build();
+
+/* ── Interacción ── */
+document.getElementById("tester").value=st.tester;
+document.getElementById("tester").addEventListener("input",e=>{st.tester=e.target.value;save()});
+secsEl.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-set]"); if(!b)return;
+  const tr=b.closest("tr"),code=tr.dataset.code,v=b.dataset.set;
+  st.rows[code]=(st.rows[code]===v)?null:v; save(); paint();
+});
+secsEl.addEventListener("input",e=>{
+  const n=e.target.closest("input[data-note]"); if(!n)return;
+  st.notes[n.dataset.note]=n.value; save();
+});
+document.querySelectorAll(".filters button").forEach(b=>b.addEventListener("click",()=>{
+  filter=b.dataset.f;
+  document.querySelectorAll(".filters button").forEach(x=>x.classList.toggle("on",x===b));
+  paint();
+}));
+document.getElementById("btnReset").addEventListener("click",()=>{
+  if(!confirm("¿Borrar TODO tu avance en este navegador?"))return;
+  st={rows:{},notes:{},tester:st.tester}; save(); build(); paint(); toast("Avance reiniciado");
+});
+document.getElementById("btnExport").addEventListener("click",()=>{
+  const d=new Date().toISOString().slice(0,10);
+  let out=`RESULTADOS VALIDACIÓN NKS LOCALIZACIÓN — ${st.tester||"(sin nombre)"} — ${d}\n`;
+  let tOk=0,tFail=0,tPend=0;
+  S.forEach(sec=>{
+    const rows=sec.c.map(r=>({c:r[0],s:st.rows[r[0]],n:st.notes[r[0]]||""}));
+    const ok=rows.filter(r=>r.s==="ok").length,fail=rows.filter(r=>r.s==="fail");
+    const pend=rows.length-ok-fail.length; tOk+=ok;tFail+=fail.length;tPend+=pend;
+    out+=`\n${sec.t} — ✅ ${ok}/${rows.length}${fail.length?` · ❌ ${fail.length}`:""}${pend?` · ⏳ ${pend}`:""}\n`;
+    fail.forEach(f=>out+=`  ❌ ${f.c}: ${f.n||"(SIN NOTA — completar)"}\n`);
+  });
+  out+=`\nTOTAL: ✅ ${tOk} · ❌ ${tFail} · ⏳ ${tPend} de ${tOk+tFail+tPend}\n`;
+  navigator.clipboard.writeText(out).then(()=>toast("Resultados copiados — pégalos en el canal"))
+    .catch(()=>{prompt("Copia manualmente:",out)});
+});
+
+/* ── Pintado ── */
+function paint(){
+  let tOk=0,tFail=0,tAll=0;
+  S.forEach(sec=>{
+    let ok=0,fail=0;
+    sec.c.forEach(r=>{
+      const s=st.rows[r[0]],tr=secsEl.querySelector(`tr[data-code="${r[0]}"]`);
+      tr.className=s==="ok"?"st-ok":s==="fail"?"st-fail":"";
+      tr.querySelector('[data-set="ok"]').className=s==="ok"?"on-ok":"";
+      tr.querySelector('[data-set="fail"]').className=s==="fail"?"on-fail":"";
+      const show=filter==="all"||(filter==="pend"&&!s)||(filter==="fail"&&s==="fail");
+      tr.style.display=show?"":"none";
+      if(s==="ok")ok++; if(s==="fail")fail++;
+    });
+    const n=sec.c.length;tOk+=ok;tFail+=fail;tAll+=n;
+    document.getElementById(`p-${sec.id}`).textContent=`${ok+fail}/${n}`;
+    document.getElementById(`pbo-${sec.id}`).style.width=(ok/n*100)+"%";
+    document.getElementById(`pbf-${sec.id}`).style.width=(fail/n*100)+"%";
+    const dot=document.getElementById(`d-${sec.id}`);
+    dot.className="dot"+(fail?" bad":ok===n?" done":ok?" part":"");
+    document.getElementById(`n-${sec.id}`).textContent=`${ok+fail}/${n}`;
+    const sEl=document.getElementById(sec.id);
+    sEl.style.display=(filter!=="all"&&![...sec.c].some(r=>{
+      const s=st.rows[r[0]];
+      return (filter==="pend"&&!s)||(filter==="fail"&&s==="fail");
+    }))?"none":"";
+  });
+  document.getElementById("gPct").textContent=Math.round((tOk+tFail)/tAll*100)+"%";
+  document.getElementById("gDetail").textContent=`✓ ${tOk} · ✗ ${tFail} · ${tAll-tOk-tFail} pend.`;
+  document.getElementById("gBarOk").style.width=(tOk/tAll*100)+"%";
+  document.getElementById("gBarFail").style.width=(tFail/tAll*100)+"%";
+}
+let tmr;function toast(m){const t=document.getElementById("toast");t.textContent=m;
+  t.classList.add("show");clearTimeout(tmr);tmr=setTimeout(()=>t.classList.remove("show"),2600)}
+paint();
+</script>
+
+</body>
+</html>
