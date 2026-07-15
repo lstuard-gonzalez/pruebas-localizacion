@@ -22,5 +22,5 @@ Validación funcional de la localización venezolana (sin nómina) por el equipo
 4. Un GitHub Action respalda los resultados al repo cada 6 horas
    ([data/resultados.json](data/resultados.json)).
 
-> El avance vive en un almacén JSON compartido (jsonblob.com) para que la página publicada
+> El avance vive en un almacén JSON compartido (kvdb.io) para que la página publicada
 > pueda guardar sin credenciales; el respaldo en el repo cubre historial y contingencia.

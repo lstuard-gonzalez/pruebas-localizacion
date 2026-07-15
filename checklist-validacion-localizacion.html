@@ -401,7 +401,7 @@ const S=[
 ];
 
 /* ── Nube (almacén compartido) ── */
-const BLOB="https://jsonblob.com/api/jsonBlob/019f6739-db84-7717-994d-a507271514bd";
+const BLOB="https://kvdb.io/EYNBu6XbG1FQJ8rhy2sCGF/resultados";
 const USERS=[["danny","Danny"],["chriselys","Chriselys"],["luis","Luis"]];
 
 /* ── Estado ── */
@@ -439,8 +439,7 @@ async function pushCloud(){
     if(!cur||typeof cur!=="object")cur={};
     cur.version=1;cur.consultores=cur.consultores||{};
     cur.consultores[slug]=snapshot();
-    const res=await fetch(BLOB,{method:"PUT",keepalive:true,
-      headers:{"Content-Type":"application/json"},body:JSON.stringify(cur)});
+    const res=await fetch(BLOB,{method:"PUT",keepalive:true,body:JSON.stringify(cur)});
     if(!res.ok)throw new Error("HTTP "+res.status);
     setSync("☁ guardado "+new Date().toLocaleTimeString("es-VE",{hour:"2-digit",minute:"2-digit"}));
   }catch(e){
@@ -554,6 +553,7 @@ async function selectUser(sl){
   try{localStorage.setItem("nks_last_user",slug)}catch(e){}
   build();paint();
   setSync(cloud?"☁ avance cargado":"listo para empezar");
+  if(Object.keys(st.rows).length)queueCloud();
   toast(`Hola, ${name}`);
 }
 
