@@ -2,7 +2,7 @@
  "version": 1,
  "tester": "Luis",
  "fecha": "2026-07-17",
- "actualizado": "2026-07-17T17:02:07.740Z",
+ "actualizado": "2026-07-17T17:02:15.478Z",
  "resumen": {
   "ok": 8,
   "fail": 1,
@@ -21,6 +21,6 @@
   "RET-04": "fail"
  },
  "notes": {
-  "RET-04": "lineas de retencion duplicadas, montos moneda extrangera"
+  "RET-04": "lineas de retencion duplicadas, montos moneda extranjera"
  }
 }
