@@ -2,18 +2,21 @@
  "version": 1,
  "tester": "Luis",
  "fecha": "2026-07-17",
- "actualizado": "2026-07-17T16:02:45.226Z",
+ "actualizado": "2026-07-17T16:07:16.902Z",
  "resumen": {
-  "ok": 4,
+  "ok": 7,
   "fail": 0,
-  "pend": 105,
+  "pend": 102,
   "total": 109
  },
  "rows": {
   "DUAL-01": "ok",
   "DUAL-02": "ok",
   "DUAL-03": "ok",
-  "DUAL-04": "ok"
+  "DUAL-04": "ok",
+  "DUAL-05": "ok",
+  "DUAL-06": "ok",
+  "DUAL-07": "ok"
  },
  "notes": {}
 }
