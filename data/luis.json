@@ -2,7 +2,7 @@
  "version": 1,
  "tester": "Luis",
  "fecha": "2026-07-17",
- "actualizado": "2026-07-17T17:01:24.098Z",
+ "actualizado": "2026-07-17T17:01:50.475Z",
  "resumen": {
   "ok": 8,
   "fail": 1,
@@ -20,5 +20,7 @@
   "RET-01": "ok",
   "RET-04": "fail"
  },
- "notes": {}
+ "notes": {
+  "RET-04": "lineas de retencion duplicadas,"
+ }
 }
