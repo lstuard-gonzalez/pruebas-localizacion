@@ -2,11 +2,11 @@
  "version": 1,
  "tester": "Luis",
  "fecha": "2026-07-20",
- "actualizado": "2026-07-20T17:28:57.360Z",
+ "actualizado": "2026-07-20T17:29:05.926Z",
  "resumen": {
-  "ok": 15,
+  "ok": 16,
   "fail": 1,
-  "pend": 93,
+  "pend": 92,
   "total": 109
  },
  "rows": {
@@ -25,7 +25,8 @@
   "RET-07": "ok",
   "RET-08": "ok",
   "RET-09": "ok",
-  "RP-01": "ok"
+  "RP-01": "ok",
+  "RP-02": "ok"
  },
  "notes": {
   "RET-04": "lineas de retencion duplicadas, montos moneda extranjera mal"
